@@ -1,0 +1,38 @@
+# ===== Build output =====
+
+Debug/
+Release/
+build/
+
+# ===== Binary files =====
+
+*.elf
+*.hex
+*.bin
+*.map
+*.list
+
+# ===== Object / dependency =====
+
+*.o
+*.d
+*.su
+
+# ===== Eclipse / STM32CubeIDE =====
+
+.metadata/
+.settings/
+*.launch
+*.log
+
+# ===== Temporary files =====
+
+*~
+*.swp
+*.tmp
+
+# ===== OS files =====
+
+.DS_Store
+Thumbs.db
+
