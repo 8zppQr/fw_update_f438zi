@@ -63,8 +63,7 @@ static void MX_ETH_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_USB_OTG_FS_PCD_Init(void);
 /* USER CODE BEGIN PFP */
-void go2slot_a(void);
-void go2slot_b(void);
+void bootimg(uint32_t img_addr);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -113,7 +112,7 @@ int main(void)
   MX_USB_OTG_FS_PCD_Init();
   /* USER CODE BEGIN 2 */
   printf("bootloader started!\r\n");
-  go2slot_a();
+  bootimg(SLOT_A_ADDR);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -347,17 +346,17 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void go2slot_a(void)
+void bootimg(uint32_t img_addr)
 {
-	pFunction JumpToApp;
-	printf("jumping to slot a...\r\n");
+	pFunction JumpToImg;
+	printf("jumping to 0x%08lX...\r\n", img_addr);
 
-	SCB->VTOR = SLOT_A_ADDR;
-	__set_MSP(*(uint32_t*)SLOT_A_ADDR);
+	SCB->VTOR = img_addr;
+	__set_MSP(*(uint32_t*)img_addr);
 
-	JumpToApp = (pFunction)(*(uint32_t*)(SLOT_A_ADDR + 4));
+	JumpToImg = (pFunction)(*(uint32_t*)(img_addr + 4));
 
-	JumpToApp();
+	JumpToImg();
 }
 /* USER CODE END 4 */
 
