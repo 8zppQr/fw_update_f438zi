@@ -33,6 +33,7 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define SLOT_A_ADDR (0x08040000U)
+#define SLOT_B_ADDR (0x080C0000U)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -112,13 +113,33 @@ int main(void)
   MX_USB_OTG_FS_PCD_Init();
   /* USER CODE BEGIN 2 */
   printf("bootloader started!\r\n");
-  bootimg(SLOT_A_ADDR);
+  printf("Select number:\r\n");
+  printf("1:Boot slot A\r\n");
+  printf("2:Boot slot B\r\n");
+  uint8_t ch;
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	    if (HAL_UART_Receive(&huart3, &ch, 1, 10) == HAL_OK)
+	    {
+	        if (ch == '1')
+	        {
+	            printf("Booting SLOT A\r\n");
+	            bootimg(SLOT_A_ADDR);
+	        }
+	        else if (ch == '2')
+	        {
+	            printf("Booting SLOT B\r\n");
+	            bootimg(SLOT_B_ADDR);
+	        }
+	        else
+	        {
+	            printf("Invalid key\r\n");
+	        }
+	    }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
