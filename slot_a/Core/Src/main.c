@@ -18,11 +18,14 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "string.h"
+#include "lwip.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include "lwip/netif.h"
+#include "lwip/ip4_addr.h"
+#include "lwip/dhcp.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -41,25 +44,17 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-
-ETH_TxPacketConfig TxConfig;
-ETH_DMADescTypeDef  DMARxDscrTab[ETH_RX_DESC_CNT]; /* Ethernet Rx DMA Descriptors */
-ETH_DMADescTypeDef  DMATxDscrTab[ETH_TX_DESC_CNT]; /* Ethernet Tx DMA Descriptors */
-
-ETH_HandleTypeDef heth;
-
 UART_HandleTypeDef huart3;
 
 PCD_HandleTypeDef hpcd_USB_OTG_FS;
 
 /* USER CODE BEGIN PV */
-
+extern struct netif gnetif;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_ETH_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_USB_OTG_FS_PCD_Init(void);
 /* USER CODE BEGIN PFP */
@@ -107,9 +102,9 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_ETH_Init();
   MX_USART3_UART_Init();
   MX_USB_OTG_FS_PCD_Init();
+  MX_LWIP_Init();
   /* USER CODE BEGIN 2 */
   printf("Slot A is booted.\r\n");
   /* USER CODE END 2 */
@@ -118,6 +113,37 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  MX_LWIP_Process();
+
+	  static uint32_t last_ip = 0;
+	  static uint8_t last_dhcp_state = 0xFF;
+	  static uint32_t last_print = 0;
+
+	  uint32_t current_ip = netif_ip4_addr(&gnetif)->addr;
+	  struct dhcp *dhcp = netif_dhcp_data(&gnetif);
+
+	  if (dhcp && dhcp->state != last_dhcp_state)
+	  {
+	    last_dhcp_state = dhcp->state;
+	    printf("DHCP state = %d\r\n", dhcp->state);
+	  }
+
+	  if (current_ip != 0 && current_ip != last_ip)
+	  {
+	    last_ip = current_ip;
+	    printf("DHCP IP acquired!\r\n");
+	    printf("IP: %s\r\n", ip4addr_ntoa(netif_ip4_addr(&gnetif)));
+	    printf("MASK: %s\r\n", ip4addr_ntoa(netif_ip4_netmask(&gnetif)));
+	    printf("GW: %s\r\n", ip4addr_ntoa(netif_ip4_gw(&gnetif)));
+	  }
+
+	  if (HAL_GetTick() - last_print >= 2000)
+	  {
+	    last_print = HAL_GetTick();
+	    printf("link=%d ip=%s\r\n",
+	           netif_is_link_up(&gnetif),
+	           ip4addr_ntoa(netif_ip4_addr(&gnetif)));
+	  }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -168,55 +194,6 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-}
-
-/**
-  * @brief ETH Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_ETH_Init(void)
-{
-
-  /* USER CODE BEGIN ETH_Init 0 */
-
-  /* USER CODE END ETH_Init 0 */
-
-   static uint8_t MACAddr[6];
-
-  /* USER CODE BEGIN ETH_Init 1 */
-
-  /* USER CODE END ETH_Init 1 */
-  heth.Instance = ETH;
-  MACAddr[0] = 0x00;
-  MACAddr[1] = 0x80;
-  MACAddr[2] = 0xE1;
-  MACAddr[3] = 0x00;
-  MACAddr[4] = 0x00;
-  MACAddr[5] = 0x00;
-  heth.Init.MACAddr = &MACAddr[0];
-  heth.Init.MediaInterface = HAL_ETH_RMII_MODE;
-  heth.Init.TxDesc = DMATxDscrTab;
-  heth.Init.RxDesc = DMARxDscrTab;
-  heth.Init.RxBuffLen = 1524;
-
-  /* USER CODE BEGIN MACADDRESS */
-
-  /* USER CODE END MACADDRESS */
-
-  if (HAL_ETH_Init(&heth) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  memset(&TxConfig, 0 , sizeof(ETH_TxPacketConfig));
-  TxConfig.Attributes = ETH_TX_PACKETS_FEATURES_CSUM | ETH_TX_PACKETS_FEATURES_CRCPAD;
-  TxConfig.ChecksumCtrl = ETH_CHECKSUM_IPHDR_PAYLOAD_INSERT_PHDR_CALC;
-  TxConfig.CRCPadCtrl = ETH_CRC_PAD_INSERT;
-  /* USER CODE BEGIN ETH_Init 2 */
-
-  /* USER CODE END ETH_Init 2 */
-
 }
 
 /**
