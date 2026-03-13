@@ -26,6 +26,8 @@
 #include "lwip/netif.h"
 #include "lwip/ip4_addr.h"
 #include "lwip/dhcp.h"
+
+#include "http_client.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -50,6 +52,7 @@ PCD_HandleTypeDef hpcd_USB_OTG_FS;
 
 /* USER CODE BEGIN PV */
 extern struct netif gnetif;
+static uint8_t http_started = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -135,15 +138,21 @@ int main(void)
 	    printf("IP: %s\r\n", ip4addr_ntoa(netif_ip4_addr(&gnetif)));
 	    printf("MASK: %s\r\n", ip4addr_ntoa(netif_ip4_netmask(&gnetif)));
 	    printf("GW: %s\r\n", ip4addr_ntoa(netif_ip4_gw(&gnetif)));
+
+	    if (!http_started)
+	    {
+	        http_started = 1;
+	        http_client_start();
+	    }
 	  }
 
-	  if (HAL_GetTick() - last_print >= 2000)
-	  {
-	    last_print = HAL_GetTick();
-	    printf("link=%d ip=%s\r\n",
-	           netif_is_link_up(&gnetif),
-	           ip4addr_ntoa(netif_ip4_addr(&gnetif)));
-	  }
+//	  if (HAL_GetTick() - last_print >= 2000)
+//	  {
+//	    last_print = HAL_GetTick();
+//	    printf("link=%d ip=%s\r\n",
+//	           netif_is_link_up(&gnetif),
+//	           ip4addr_ntoa(netif_ip4_addr(&gnetif)));
+//	  }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
