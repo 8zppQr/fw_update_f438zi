@@ -111,7 +111,7 @@ int main(void)
   MX_USART3_UART_Init();
   MX_USB_OTG_FS_PCD_Init();
   /* USER CODE BEGIN 2 */
-  printf("Slot B is booted.\r\n");
+  printf("Slot B is booted(Updated).\r\n");
   /* USER CODE END 2 */
 
   /* Infinite loop */
