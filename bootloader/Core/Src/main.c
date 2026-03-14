@@ -34,6 +34,7 @@
 /* USER CODE BEGIN PD */
 #define SLOT_A_ADDR (0x08040000U)
 #define SLOT_B_ADDR (0x080C0000U)
+#define HEADER_SIZE   (0x200U)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -133,7 +134,7 @@ int main(void)
 	        else if (ch == '2')
 	        {
 	            printf("Booting SLOT B\r\n");
-	            bootimg(SLOT_B_ADDR);
+	            bootimg(SLOT_B_ADDR + HEADER_SIZE);
 	        }
 	        else
 	        {
