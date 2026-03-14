@@ -68,6 +68,13 @@ typedef struct {
 #define IMAGE_MAGIC 0x96F3B83DU
 #define TLV_INFO_MAGIC 0x6907U
 #define TLV_TYPE_SHA256 0x0010U
+
+#define TLV_TYPE_KEYHASH      0x0001U
+#define TLV_TYPE_RSA2048_PSS  0x0020U
+#define TLV_TYPE_ECDSA224     0x0021U
+#define TLV_TYPE_ECDSA256     0x0022U
+#define TLV_TYPE_RSA3072_PSS  0x0023U
+#define TLV_TYPE_ED25519      0x0024U
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -266,6 +273,59 @@ static void VerifySlotBHash(void)
 
     printf("SHA256 TLV not found\r\n");
 }
+
+static void DumpSlotBTlvs(void)
+{
+    const image_header_t *hdr = (const image_header_t *)SLOT_B_ADDR;
+
+    if (hdr->ih_magic != IMAGE_MAGIC) {
+        printf("Header magic NG\r\n");
+        return;
+    }
+
+    uint32_t vector_addr = SLOT_B_ADDR + (uint32_t)hdr->ih_hdr_size;
+    uint32_t tlv_start   = vector_addr + (uint32_t)hdr->ih_img_size;
+    const image_tlv_info_t *info = (const image_tlv_info_t *)tlv_start;
+
+    printf("=== Slot B TLV dump ===\r\n");
+    printf("TLV start:            0x%08lX\r\n", (unsigned long)tlv_start);
+    printf("TLV magic:            0x%04X\r\n", info->magic);
+    printf("TLV total size:       0x%04X\r\n", info->tlv_tot);
+
+    if (info->magic != TLV_INFO_MAGIC) {
+        printf("TLV magic NG\r\n");
+        return;
+    }
+
+    uint32_t tlv_end = tlv_start + info->tlv_tot;
+    uint32_t p = tlv_start + sizeof(image_tlv_info_t);
+
+    while (p + sizeof(image_tlv_t) <= tlv_end) {
+        const image_tlv_t *tlv = (const image_tlv_t *)p;
+        uint32_t value_addr = p + sizeof(image_tlv_t);
+
+        if (value_addr + tlv->len > tlv_end) {
+            printf("TLV range error\r\n");
+            return;
+        }
+
+        printf("TLV type:             0x%04X\r\n", tlv->type);
+        printf("TLV len:              0x%04X\r\n", tlv->len);
+
+        if (tlv->type == TLV_TYPE_KEYHASH) {
+            printf("KEYHASH:\r\n");
+            print_hex((const uint8_t *)value_addr, tlv->len);
+        } else if (tlv->type == TLV_TYPE_SHA256) {
+            printf("SHA256:\r\n");
+            print_hex((const uint8_t *)value_addr, tlv->len);
+        } else if (tlv->type == TLV_TYPE_ECDSA256) {
+            printf("ECDSA256 signature:\r\n");
+            print_hex((const uint8_t *)value_addr, tlv->len);
+        }
+
+        p = value_addr + tlv->len;
+    }
+}
 /* USER CODE END 0 */
 
 /**
@@ -304,6 +364,7 @@ int main(void)
   printf("bootloader started!\r\n");
   PrintSlotBHeader();
   VerifySlotBHash();
+  DumpSlotBTlvs();
   printf("Select number:\r\n");
   printf("1:Boot slot A\r\n");
   printf("2:Boot slot B\r\n");
