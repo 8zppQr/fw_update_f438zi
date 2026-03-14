@@ -25,39 +25,13 @@
 #include <stdio.h>
 #include <tinycrypt/sha256.h>
 #include <tinycrypt/constants.h>
+#include "image_parser.h"
+#include "image_verify.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-#pragma pack(push, 1)
-typedef struct {
-    uint32_t ih_magic;            // 0x96f3b83d
-    uint32_t ih_load_addr;        // dumpinfoでは0
-    uint16_t ih_hdr_size;         // dumpinfoでは0x200
-    uint16_t ih_protect_tlv_size; // dumpinfoでは0
-    uint32_t ih_img_size;         // dumpinfoのimg_size
-    uint32_t ih_flags;            // dumpinfoのflags
-    // image_version
-    uint8_t  iv_major;
-    uint8_t  iv_minor;
-    uint16_t iv_revision;
-    uint32_t iv_build_num;
-    uint32_t _pad1;               // MCUboot headerの詰め物（dumpinfoにもある想定）
-} image_header_t;
-#pragma pack(pop)
 
-#pragma pack(push, 1)
-typedef struct {
-    uint16_t magic;      // 0x6907
-    uint16_t tlv_tot;    // TLV全体サイズ（このヘッダ4バイトを含む）
-} image_tlv_info_t;
-
-typedef struct {
-    uint16_t type;       // 0x0010 = SHA256
-    uint16_t len;        // 0x0020 = 32 bytes
-    // followed by len bytes
-} image_tlv_t;
-#pragma pack(pop)
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -65,7 +39,7 @@ typedef struct {
 #define SLOT_A_ADDR (0x08040000U)
 #define SLOT_B_ADDR (0x080C0000U)
 #define HEADER_SIZE (0x200U)
-#define IMAGE_MAGIC 0x96F3B83DU
+
 #define TLV_INFO_MAGIC 0x6907U
 #define TLV_TYPE_SHA256 0x0010U
 
@@ -95,7 +69,20 @@ UART_HandleTypeDef huart3;
 PCD_HandleTypeDef hpcd_USB_OTG_FS;
 
 /* USER CODE BEGIN PV */
-
+static const uint8_t g_pubkey_der[] = {
+    0x30, 0x59, 0x30, 0x13, 0x06, 0x07, 0x2a, 0x86,
+    0x48, 0xce, 0x3d, 0x02, 0x01, 0x06, 0x08, 0x2a,
+    0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07, 0x03,
+    0x42, 0x00, 0x04, 0x32, 0x83, 0x45, 0xcc, 0x2e,
+    0xc4, 0xb1, 0xab, 0x14, 0x95, 0x67, 0xc7, 0x84,
+    0xc3, 0x20, 0xbc, 0x0a, 0x22, 0x44, 0xa2, 0xff,
+    0xed, 0xf8, 0xd2, 0x8d, 0xee, 0x87, 0x88, 0x76,
+    0x35, 0x75, 0x9e, 0x17, 0x6b, 0x2e, 0xb4, 0xcd,
+    0xa9, 0xba, 0x53, 0x40, 0x3e, 0x42, 0x7d, 0x39,
+    0xf4, 0x4d, 0x1f, 0xb0, 0x97, 0xb3, 0x56, 0x1b,
+    0x9f, 0xc7, 0x6e, 0x64, 0xb5, 0x4a, 0xe7, 0x2f,
+    0xcd, 0x4c, 0x25,
+};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -362,9 +349,36 @@ int main(void)
   MX_USB_OTG_FS_PCD_Init();
   /* USER CODE BEGIN 2 */
   printf("bootloader started!\r\n");
-  PrintSlotBHeader();
-  VerifySlotBHash();
-  DumpSlotBTlvs();
+
+  image_layout_t img;
+
+  if (image_get_layout(SLOT_B_ADDR, &img)) {
+      image_dump_header(&img);
+      image_dump_tlvs(&img);
+
+      if (image_verify_hash(&img)) {
+          printf("image_verify_hash: OK\r\n");
+      } else {
+          printf("image_verify_hash: NG\r\n");
+      }
+
+      if (image_verify_keyhash(&img, g_pubkey_der, sizeof(g_pubkey_der))) {
+          printf("image_verify_keyhash: OK\r\n");
+      } else {
+          printf("image_verify_keyhash: NG\r\n");
+      }
+
+      if (image_verify_signature(&img, g_pubkey_der, sizeof(g_pubkey_der))) {
+          printf("image_verify_signature: OK\r\n");
+      } else {
+          printf("image_verify_signature: NG\r\n");
+      }
+  } else {
+      printf("Slot B image parse failed\r\n");
+  }
+//  PrintSlotBHeader();
+//  VerifySlotBHash();
+//  DumpSlotBTlvs();
   printf("Select number:\r\n");
   printf("1:Boot slot A\r\n");
   printf("2:Boot slot B\r\n");
