@@ -23,6 +23,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include <tinycrypt/sha256.h>
+#include <tinycrypt/constants.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -78,6 +80,44 @@ int __io_putchar(int ch)
 
     return ch;
 }
+
+static void print_hex(const uint8_t *buf, size_t len)
+{
+    for (size_t i = 0; i < len; i++) {
+        printf("%02x", buf[i]);
+    }
+    printf("\r\n");
+}
+
+void test_sha256_abc(void)
+{
+    const uint8_t msg[] = "abc";
+    uint8_t digest[TC_SHA256_DIGEST_SIZE];
+    struct tc_sha256_state_struct s;
+
+    int ret;
+
+    ret = tc_sha256_init(&s);
+    if (ret != TC_CRYPTO_SUCCESS) {
+        printf("tc_sha256_init failed\r\n");
+        return;
+    }
+
+    ret = tc_sha256_update(&s, msg, strlen((const char *)msg));
+    if (ret != TC_CRYPTO_SUCCESS) {
+        printf("tc_sha256_update failed\r\n");
+        return;
+    }
+
+    ret = tc_sha256_final(digest, &s);
+    if (ret != TC_CRYPTO_SUCCESS) {
+        printf("tc_sha256_final failed\r\n");
+        return;
+    }
+
+    printf("SHA256(\"abc\") = ");
+    print_hex(digest, sizeof(digest));
+}
 /* USER CODE END 0 */
 
 /**
@@ -114,6 +154,8 @@ int main(void)
   MX_USB_OTG_FS_PCD_Init();
   /* USER CODE BEGIN 2 */
   printf("bootloader started!\r\n");
+  printf("tinycrypt sha256 test start\r\n");
+  test_sha256_abc();
   printf("Select number:\r\n");
   printf("1:Boot slot A\r\n");
   printf("2:Boot slot B\r\n");
