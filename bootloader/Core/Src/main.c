@@ -29,14 +29,45 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+#pragma pack(push, 1)
+typedef struct {
+    uint32_t ih_magic;            // 0x96f3b83d
+    uint32_t ih_load_addr;        // dumpinfoでは0
+    uint16_t ih_hdr_size;         // dumpinfoでは0x200
+    uint16_t ih_protect_tlv_size; // dumpinfoでは0
+    uint32_t ih_img_size;         // dumpinfoのimg_size
+    uint32_t ih_flags;            // dumpinfoのflags
+    // image_version
+    uint8_t  iv_major;
+    uint8_t  iv_minor;
+    uint16_t iv_revision;
+    uint32_t iv_build_num;
+    uint32_t _pad1;               // MCUboot headerの詰め物（dumpinfoにもある想定）
+} image_header_t;
+#pragma pack(pop)
 
+#pragma pack(push, 1)
+typedef struct {
+    uint16_t magic;      // 0x6907
+    uint16_t tlv_tot;    // TLV全体サイズ（このヘッダ4バイトを含む）
+} image_tlv_info_t;
+
+typedef struct {
+    uint16_t type;       // 0x0010 = SHA256
+    uint16_t len;        // 0x0020 = 32 bytes
+    // followed by len bytes
+} image_tlv_t;
+#pragma pack(pop)
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define SLOT_A_ADDR (0x08040000U)
 #define SLOT_B_ADDR (0x080C0000U)
-#define HEADER_SIZE   (0x200U)
+#define HEADER_SIZE (0x200U)
+#define IMAGE_MAGIC 0x96F3B83DU
+#define TLV_INFO_MAGIC 0x6907U
+#define TLV_TYPE_SHA256 0x0010U
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -89,34 +120,151 @@ static void print_hex(const uint8_t *buf, size_t len)
     printf("\r\n");
 }
 
-void test_sha256_abc(void)
+//void test_sha256_abc(void)
+//{
+//    const uint8_t msg[] = "abc";
+//    uint8_t digest[TC_SHA256_DIGEST_SIZE];
+//    struct tc_sha256_state_struct s;
+//
+//    int ret;
+//
+//    ret = tc_sha256_init(&s);
+//    if (ret != TC_CRYPTO_SUCCESS) {
+//        printf("tc_sha256_init failed\r\n");
+//        return;
+//    }
+//
+//    ret = tc_sha256_update(&s, msg, strlen((const char *)msg));
+//    if (ret != TC_CRYPTO_SUCCESS) {
+//        printf("tc_sha256_update failed\r\n");
+//        return;
+//    }
+//
+//    ret = tc_sha256_final(digest, &s);
+//    if (ret != TC_CRYPTO_SUCCESS) {
+//        printf("tc_sha256_final failed\r\n");
+//        return;
+//    }
+//
+//    printf("SHA256(\"abc\") = ");
+//    print_hex(digest, sizeof(digest));
+//}
+
+static void PrintSlotBHeader(void)
 {
-    const uint8_t msg[] = "abc";
-    uint8_t digest[TC_SHA256_DIGEST_SIZE];
-    struct tc_sha256_state_struct s;
+    const image_header_t *hdr = (const image_header_t *)SLOT_B_ADDR;
 
-    int ret;
+    printf("=== Slot B image header @ 0x%08lX ===\r\n", (unsigned long)SLOT_B_ADDR);
+    printf("magic:              0x%08lX\r\n", (unsigned long)hdr->ih_magic);
+    printf("load_addr:          0x%08lX\r\n", (unsigned long)hdr->ih_load_addr);
+    printf("hdr_size:           0x%04X\r\n",  (unsigned)hdr->ih_hdr_size);
+    printf("protected_tlv_size: 0x%04X\r\n",  (unsigned)hdr->ih_protect_tlv_size);
+    printf("img_size:           0x%08lX\r\n", (unsigned long)hdr->ih_img_size);
+    printf("flags:              0x%08lX\r\n", (unsigned long)hdr->ih_flags);
+    printf("version:            %u.%u.%u+%lu\r\n",
+           (unsigned)hdr->iv_major,
+           (unsigned)hdr->iv_minor,
+           (unsigned)hdr->iv_revision,
+           (unsigned long)hdr->iv_build_num);
 
-    ret = tc_sha256_init(&s);
-    if (ret != TC_CRYPTO_SUCCESS) {
-        printf("tc_sha256_init failed\r\n");
+    if (hdr->ih_magic != IMAGE_MAGIC) {
+        printf("Header magic NG\r\n");
         return;
     }
 
-    ret = tc_sha256_update(&s, msg, strlen((const char *)msg));
-    if (ret != TC_CRYPTO_SUCCESS) {
-        printf("tc_sha256_update failed\r\n");
+    uint32_t vector = SLOT_B_ADDR + (uint32_t)hdr->ih_hdr_size;
+    uint32_t msp    = *(__IO uint32_t *)vector;
+    uint32_t rh     = *(__IO uint32_t *)(vector + 4U);
+
+    printf("vector_addr:         0x%08lX\r\n", (unsigned long)vector);
+    printf("vector[0] MSP:       0x%08lX\r\n", (unsigned long)msp);
+    printf("vector[1] ResetHdlr: 0x%08lX\r\n", (unsigned long)rh);
+
+
+}
+
+static void VerifySlotBHash(void)
+{
+    const image_header_t *hdr = (const image_header_t *)SLOT_B_ADDR;
+
+    if (hdr->ih_magic != IMAGE_MAGIC) {
+        printf("Header magic NG\r\n");
         return;
     }
 
-    ret = tc_sha256_final(digest, &s);
-    if (ret != TC_CRYPTO_SUCCESS) {
-        printf("tc_sha256_final failed\r\n");
+    uint32_t vector_addr = SLOT_B_ADDR + (uint32_t)hdr->ih_hdr_size;
+    uint32_t tlv_start   = vector_addr + (uint32_t)hdr->ih_img_size;
+
+    const image_tlv_info_t *info = (const image_tlv_info_t *)tlv_start;
+
+    printf("=== Slot B TLV verify ===\r\n");
+    printf("TLV start:            0x%08lX\r\n", (unsigned long)tlv_start);
+    printf("TLV magic:            0x%04X\r\n", info->magic);
+    printf("TLV total size:       0x%04X\r\n", info->tlv_tot);
+
+    if (info->magic != TLV_INFO_MAGIC) {
+        printf("TLV magic NG\r\n");
         return;
     }
 
-    printf("SHA256(\"abc\") = ");
-    print_hex(digest, sizeof(digest));
+    uint32_t tlv_end = tlv_start + info->tlv_tot;
+    uint32_t p = tlv_start + sizeof(image_tlv_info_t);
+
+    while (p + sizeof(image_tlv_t) <= tlv_end) {
+        const image_tlv_t *tlv = (const image_tlv_t *)p;
+        uint32_t value_addr = p + sizeof(image_tlv_t);
+
+        printf("TLV type:             0x%04X\r\n", tlv->type);
+        printf("TLV len:              0x%04X\r\n", tlv->len);
+
+        if (value_addr + tlv->len > tlv_end) {
+            printf("TLV range error\r\n");
+            return;
+        }
+
+        if (tlv->type == TLV_TYPE_SHA256 && tlv->len == 32U) {
+            uint8_t expected[32];
+            uint8_t calculated[32];
+            struct tc_sha256_state_struct s;
+
+            memcpy(expected, (const void *)value_addr, sizeof(expected));
+
+            printf("Expected SHA256:\r\n");
+            print_hex(expected, sizeof(expected));
+
+            uint32_t hash_start = SLOT_B_ADDR;
+            uint32_t hash_len   = (uint32_t)hdr->ih_hdr_size + (uint32_t)hdr->ih_img_size;
+
+            if (!tc_sha256_init(&s)) {
+                printf("tc_sha256_init failed\r\n");
+                return;
+            }
+
+            if (!tc_sha256_update(&s, (const uint8_t *)hash_start, hash_len)) {
+                printf("tc_sha256_update failed\r\n");
+                return;
+            }
+
+            if (!tc_sha256_final(calculated, &s)) {
+                printf("tc_sha256_final failed\r\n");
+                return;
+            }
+
+            printf("Calculated SHA256:\r\n");
+            print_hex(calculated, sizeof(calculated));
+
+            if (memcmp(expected, calculated, sizeof(expected)) == 0) {
+                printf("HASH MATCH\r\n");
+            } else {
+                printf("HASH MISMATCH\r\n");
+            }
+            return;
+        }
+
+        p = value_addr + tlv->len;
+    }
+
+    printf("SHA256 TLV not found\r\n");
 }
 /* USER CODE END 0 */
 
@@ -154,8 +302,8 @@ int main(void)
   MX_USB_OTG_FS_PCD_Init();
   /* USER CODE BEGIN 2 */
   printf("bootloader started!\r\n");
-  printf("tinycrypt sha256 test start\r\n");
-  test_sha256_abc();
+  PrintSlotBHeader();
+  VerifySlotBHash();
   printf("Select number:\r\n");
   printf("1:Boot slot A\r\n");
   printf("2:Boot slot B\r\n");
