@@ -270,7 +270,7 @@ extern UART_HandleTypeDef huart3;
 
 /* ===== OTA target ===== */
 #define SLOT_B_ADDR       0x080C0000UL
-#define SLOT_B_MAX_SIZE   (256UL * 1024UL)   /* 0x080C0000 - 0x080FFFFF */
+#define SLOT_B_MAX_SIZE   (512UL * 1024UL)   /* 0x080C0000 - 0x080FFFFF */
 
 /* ===== HTTP header buffer ===== */
 #define HTTP_HEADER_BUF_SIZE 512
@@ -471,7 +471,10 @@ static void ota_finish(int ok)
     if (ok) {
         printf("Download complete: %lu / %lu bytes\r\n", body_received, content_length);
         printf("Image written to 0x%08lX\r\n", SLOT_B_ADDR);
-        printf("Next: verify CRC / set boot flag to slot B / reset\r\n");
+
+        printf("Rebooting...\r\n");
+        HAL_Delay(100);
+        NVIC_SystemReset();
     } else {
         printf("Download failed: %lu / %lu bytes\r\n", body_received, content_length);
     }
