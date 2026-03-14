@@ -1,0 +1,12 @@
+../Drivers/CMSIS/Include/core_cm4.h:1938:34:__NVIC_SystemReset	1
+../Core/Src/http_client.c:53:13:ota_reset_state	1
+../Core/Src/http_client.c:66:17:get_sector	25
+../Core/Src/http_client.c:97:26:ota_erase_slot_b	4
+../Core/Src/http_client.c:133:26:ota_write_byte	1
+../Core/Src/http_client.c:139:12:ota_parse_content_length	5
+../Core/Src/http_client.c:165:12:ota_process_body_bytes	4
+../Core/Src/http_client.c:190:13:ota_finish	2
+../Core/Src/http_client.c:211:6:http_client_start	6
+../Core/Src/http_client.c:259:14:http_client_connected	4
+../Core/Src/http_client.c:309:14:http_client_recv	20
+../Core/Src/http_client.c:437:13:http_client_err	1

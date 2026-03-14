@@ -1,0 +1,8 @@
+../Core/Src/image_parser.c:5:12:image_is_range_valid_u32	3
+../Core/Src/image_parser.c:18:5:image_get_layout	6
+../Core/Src/image_parser.c:69:5:image_find_tlv	8
+../Core/Src/image_parser.c:103:13:image_tlv_type_to_str	8
+../Core/Src/image_parser.c:117:10:image_get_msp	2
+../Core/Src/image_parser.c:126:10:image_get_reset_handler	2
+../Core/Src/image_parser.c:135:6:image_dump_header	3
+../Core/Src/image_parser.c:165:6:image_dump_tlvs	6

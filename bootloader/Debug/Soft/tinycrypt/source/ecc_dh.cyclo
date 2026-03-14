@@ -1,0 +1,4 @@
+C:/Users/iisec/Documents/fw_update_f438zi/bootloader/Soft/tinycrypt/include/tinycrypt/utils.h:89:20:_set_secure	1
+../Soft/tinycrypt/source/ecc_dh.c:63:5:uECC_make_key_with_d	3
+../Soft/tinycrypt/source/ecc_dh.c:97:5:uECC_make_key	7
+../Soft/tinycrypt/source/ecc_dh.c:139:5:uECC_shared_secret	4

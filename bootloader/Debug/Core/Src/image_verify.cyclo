@@ -1,0 +1,7 @@
+../Core/Src/image_verify.c:14:13:verify_print_hex	2
+../Core/Src/image_verify.c:23:12:der_ecdsa_sig_to_rs64	23
+../Core/Src/image_verify.c:111:12:der_pubkey_find_point65	6
+../Core/Src/image_verify.c:132:5:image_calc_hash	7
+../Core/Src/image_verify.c:161:5:image_verify_hash	6
+../Core/Src/image_verify.c:202:5:image_verify_keyhash	10
+../Core/Src/image_verify.c:257:5:image_verify_signature	9

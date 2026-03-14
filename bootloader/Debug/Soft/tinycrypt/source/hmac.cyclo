@@ -1,0 +1,5 @@
+../Soft/tinycrypt/source/hmac.c:37:13:rekey	3
+../Soft/tinycrypt/source/hmac.c:52:5:tc_hmac_set_key	5
+../Soft/tinycrypt/source/hmac.c:95:5:tc_hmac_init	2
+../Soft/tinycrypt/source/hmac.c:109:5:tc_hmac_update	2
+../Soft/tinycrypt/source/hmac.c:124:5:tc_hmac_final	4

@@ -1,0 +1,4 @@
+../Soft/tinycrypt/source/hmac_prng.c:78:13:update	9
+../Soft/tinycrypt/source/hmac_prng.c:130:5:tc_hmac_prng_init	4
+../Soft/tinycrypt/source/hmac_prng.c:154:5:tc_hmac_prng_reseed	8
+../Soft/tinycrypt/source/hmac_prng.c:192:5:tc_hmac_prng_generate	7

@@ -1,0 +1,6 @@
+../Soft/tinycrypt/source/cmac_mode.c:78:6:gf_double	3
+../Soft/tinycrypt/source/cmac_mode.c:97:5:tc_cmac_setup	3
+../Soft/tinycrypt/source/cmac_mode.c:125:5:tc_cmac_erase	2
+../Soft/tinycrypt/source/cmac_mode.c:137:5:tc_cmac_init	2
+../Soft/tinycrypt/source/cmac_mode.c:157:5:tc_cmac_update	11
+../Soft/tinycrypt/source/cmac_mode.c:222:5:tc_cmac_final	5
